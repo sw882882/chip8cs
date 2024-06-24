@@ -301,31 +301,23 @@ namespace Chip8
                             v[x] ^= v[y];
                             break;
                         case 0x0004:
-                            // add vy and vx
-                            // carry if greater than 255
-                            if (v[y] > 0xFF - v[x])
                             {
-                                v[0xF] = 1;
+                                // add vy and vx
+                                // carry if greater than 255
+                                var temp = v[x] + v[y];
+                                v[x] = (byte)(temp & 0xFF);
+                                v[0xF] = (byte)(temp > 255 ? 1 : 0);
                             }
-                            else
-                            {
-                                v[0xF] = 0;
-                            }
-                            v[x] += v[y];
+
                             break;
                         case 0x0005:
-                            // subtract vy from vx
-                            // borrow if vx is less than vy
-                            if (v[x] < v[y])
                             {
-                                v[0xF] = 0;
+                                // subtract vy from vx
+                                // borrow if vx is less than vy
+                                var temp = v[x] - v[y];
+                                v[x] -= v[y];
+                                v[0xF] = (byte)(temp < 0 ? 0 : 1);
                             }
-                            else
-                            {
-                                v[0xF] = 1;
-                                // underflow
-                            }
-                            v[x] -= v[y];
                             break;
                         case 0x0007:
                             // subtract vx from vy
@@ -334,14 +326,17 @@ namespace Chip8
                             v[0xf] = (byte)(v[y] > v[x] ? 1 : 0);
                             break;
                         case 0x0006:
-                            // shift vx right by 1
-                            // ambiguous instruction
-                            if (shift8XYSetVXtoVY)
                             {
-                                v[x] = v[y];
+                                // shift vx right by 1
+                                // ambiguous instruction
+                                if (shift8XYSetVXtoVY)
+                                {
+                                    v[x] = v[y];
+                                }
+                                var temp = v[x];
+                                v[x] >>= 0x1;
+                                v[0xF] = (byte)(temp & 0x1);
                             }
-                            v[0xF] = (byte)(v[x] & 0x1);
-                            v[x] >>= 0x1;
                             break;
                         case 0x000E:
                             // shift vx left by 1
@@ -350,8 +345,9 @@ namespace Chip8
                             {
                                 v[x] = v[y];
                             }
-                            v[0xF] = (byte)(v[x] >> 7);
+                            var temp1 = v[x];
                             v[x] <<= 0x1;
+                            v[0xF] = (byte)(temp1 >> 7);
                             break;
                         default:
                             throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
@@ -377,7 +373,6 @@ namespace Chip8
                     v[x] = (byte)(new Random().Next(0, 256) & (opcode & 0x00FF));
                     break;
                 case 0xD000:
-                    v[0xF] = 0;
                     for (int n = 0; n < (opcode & 0x000F); n++)
                     {
                         byte sprite = memory[i + n];
@@ -396,6 +391,7 @@ namespace Chip8
                         // shift sprite left 1
                         sprite <<= 1;
                     }
+                    v[0xF] = 0;
                     break;
                 case 0xE000:
                     switch (opcode & 0x00FF)
