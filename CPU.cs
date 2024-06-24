@@ -140,6 +140,7 @@ namespace Chip8
             }
             // load rom
             loadRom(rom);
+            emulator.playSound(440, 127);
         }
 
         public void run()
@@ -302,15 +303,29 @@ namespace Chip8
                         case 0x0004:
                             // add vy and vx
                             // carry if greater than 255
-                            var sum = v[x] + v[y];
-                            v[0xF] = (byte)(sum > 0xFF ? 1 : 0);
-                            v[x] = (byte)sum;
+                            if (v[y] > 0xFF - v[x])
+                            {
+                                v[0xF] = 1;
+                            }
+                            else
+                            {
+                                v[0xF] = 0;
+                            }
+                            v[x] += v[y];
                             break;
                         case 0x0005:
                             // subtract vy from vx
                             // borrow if vx is less than vy
-                            v[x] = (byte)(v[x] - v[y]);
-                            v[0xf] = (byte)(v[x] < v[y] ? 1 : 0);
+                            if (v[x] < v[y])
+                            {
+                                v[0xF] = 0;
+                            }
+                            else
+                            {
+                                v[0xF] = 1;
+                                // underflow
+                            }
+                            v[x] -= v[y];
                             break;
                         case 0x0007:
                             // subtract vx from vy
@@ -325,8 +340,8 @@ namespace Chip8
                             {
                                 v[x] = v[y];
                             }
-                            v[x] = (byte)(v[x] >> 1);
                             v[0xF] = (byte)(v[x] & 0x1);
+                            v[x] >>= 0x1;
                             break;
                         case 0x000E:
                             // shift vx left by 1
@@ -335,8 +350,8 @@ namespace Chip8
                             {
                                 v[x] = v[y];
                             }
-                            v[x] = (byte)(v[x] << 1);
                             v[0xF] = (byte)(v[x] >> 7);
+                            v[x] <<= 0x1;
                             break;
                         default:
                             throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
@@ -416,7 +431,7 @@ namespace Chip8
                             break;
                         case 0x0018:
                             // set sound timer to vx
-                            delayTimer = v[x];
+                            emulator.SoundTimer = v[x];
                             break;
                         case 0x001E:
                             // add VX to I
