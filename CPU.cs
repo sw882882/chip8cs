@@ -30,9 +30,12 @@ namespace Chip8
         private ushort pc = 0x200;
 
         // stack
-        private List<ushort> stack = new List<ushort>();
+        private Stack<ushort> stack = new Stack<ushort>();
         private bool paused = false;
         private int speed = 10;
+
+        // debugging
+        private bool goByClock;
 
         private byte[] sprites = new byte[]
         {
@@ -118,12 +121,18 @@ namespace Chip8
             0x80 // F
         };
 
-        public CPU(Emulator emulator, byte[] rom, bool shift8XYSetVXtoVY = false)
+        public CPU(
+            Emulator emulator,
+            byte[] rom,
+            bool shift8XYSetVXtoVY = false,
+            bool goByClock = false
+        )
         {
             this.emulator = emulator;
             cycleDelay = (float)1000 / emulator.Cpu_hz;
             frameDelay = (float)1000 / emulator.Screen_hz;
             this.shift8XYSetVXtoVY = shift8XYSetVXtoVY;
+            this.goByClock = goByClock;
             // load sprites
             for (int i = 0; i < sprites.Length; i++)
             {
@@ -140,6 +149,13 @@ namespace Chip8
                 emulator.PollEvents();
                 if (emulator.SDL_GetTicks() >= nextCycleTime)
                 {
+                    if (goByClock)
+                    {
+                        if (!emulator.isKeyPressed(0x11))
+                        {
+                            continue;
+                        }
+                    }
                     cycle();
                     nextCycleTime += cycleDelay;
                 }
@@ -179,14 +195,14 @@ namespace Chip8
 
         public void cycle()
         {
-            if (paused)
-            {
-                return;
-            }
+            // if (paused)
+            // {
+            //     return;
+            // }
             // fetch
             ushort opcode = (ushort)(memory[pc] << 8 | memory[pc + 1]);
-            // increment program counter
             pc += 2;
+            // increment program counter
             // decode
             executeInstruction(opcode);
         }
@@ -210,9 +226,20 @@ namespace Chip8
             // keeps the first 4 bits
             switch (opcode & 0xF000)
             {
-                case 0x00E0:
-                    // clear screen
-                    emulator.clear();
+                case 0x0000:
+                    switch (opcode & 0x0FFF)
+                    {
+                        case 0x00E0:
+                            // clear screen
+                            emulator.clear();
+                            break;
+                        case 0x00EE:
+                            // pop and return from subroutine
+                            pc = stack.Pop();
+                            break;
+                        default:
+                            throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
+                    }
                     break;
                 case 0x1000:
                     // jump
@@ -220,13 +247,8 @@ namespace Chip8
                     break;
                 case 0x2000:
                     // call subroutine
+                    stack.Push(pc);
                     pc = (ushort)(opcode & 0x0FFF);
-                    stack.Add(pc);
-                    break;
-                case 0x00EE:
-                    // pop and return from subroutine
-                    pc = stack[stack.Count - 1];
-                    stack.RemoveAt(stack.Count - 1);
                     break;
                 case 0x3000:
                     // skip if vx is equal to nn (3XNN)
@@ -280,41 +302,21 @@ namespace Chip8
                         case 0x0004:
                             // add vy and vx
                             // carry if greater than 255
-                            v[x] += v[y];
-                            if (v[x] > 255)
-                            {
-                                v[0xF] = (byte)1;
-                            }
-                            else
-                            {
-                                v[0xF] = (byte)0;
-                            }
+                            var sum = v[x] + v[y];
+                            v[0xF] = (byte)(sum > 0xFF ? 1 : 0);
+                            v[x] = (byte)sum;
                             break;
                         case 0x0005:
                             // subtract vy from vx
                             // borrow if vx is less than vy
-                            if (v[x] > v[y])
-                            {
-                                v[0xF] = (byte)1;
-                            }
-                            else
-                            {
-                                v[0xF] = (byte)0;
-                            }
-                            v[x] -= v[y];
+                            v[x] = (byte)(v[x] - v[y]);
+                            v[0xf] = (byte)(v[x] < v[y] ? 1 : 0);
                             break;
                         case 0x0007:
                             // subtract vx from vy
                             // borrow if vy is less than vx
-                            if (v[y] > v[x])
-                            {
-                                v[0xF] = (byte)1;
-                            }
-                            else
-                            {
-                                v[0xF] = (byte)0;
-                            }
                             v[x] = (byte)(v[y] - v[x]);
+                            v[0xf] = (byte)(v[y] > v[x] ? 1 : 0);
                             break;
                         case 0x0006:
                             // shift vx right by 1
@@ -334,8 +336,10 @@ namespace Chip8
                                 v[x] = v[y];
                             }
                             v[x] = (byte)(v[x] << 1);
-                            v[0xF] = (byte)(v[x] & 0x80);
+                            v[0xF] = (byte)(v[x] >> 7);
                             break;
+                        default:
+                            throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
                     }
                     break;
                 case 0x9000:
@@ -355,7 +359,7 @@ namespace Chip8
                     break;
                 case 0xC000:
                     // set vx to random number and NN
-                    v[x] = (byte)(new Random().Next(0, 255) & (opcode & 0x00FF));
+                    v[x] = (byte)(new Random().Next(0, 256) & (opcode & 0x00FF));
                     break;
                 case 0xD000:
                     v[0xF] = 0;
@@ -395,6 +399,8 @@ namespace Chip8
                                 pc += 2;
                             }
                             break;
+                        default:
+                            throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
                     }
                     break;
                 case 0xF000:
@@ -414,19 +420,7 @@ namespace Chip8
                             break;
                         case 0x001E:
                             // add VX to I
-                            // overflow is ambiguous behavior but
-                            // some games rely on it and it doesn't
-                            // break much
-                            // so we'll just let it overflow
                             i += v[x];
-                            if (i > 0xFFF)
-                            {
-                                v[0xF] = 1;
-                            }
-                            else
-                            {
-                                v[0xF] = 0;
-                            }
 
                             break;
                         case 0x000A:
@@ -481,8 +475,12 @@ namespace Chip8
                                 v[n] = memory[i + n];
                             }
                             break;
+                        default:
+                            throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
                     }
                     break;
+                default:
+                    throw new Exception($"Unsupported opcode {opcode.ToString("X4")}");
             }
         }
     }

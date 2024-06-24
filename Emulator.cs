@@ -55,7 +55,9 @@ namespace Chip8
             { 0xA, SDL.SDL_Scancode.SDL_SCANCODE_Z },
             { 0x0, SDL.SDL_Scancode.SDL_SCANCODE_X },
             { 0xB, SDL.SDL_Scancode.SDL_SCANCODE_C },
-            { 0xF, SDL.SDL_Scancode.SDL_SCANCODE_V }
+            { 0xF, SDL.SDL_Scancode.SDL_SCANCODE_V },
+            // debug
+            { 0x11, SDL.SDL_Scancode.SDL_SCANCODE_L },
         };
 
         private List<byte> pressedKeys;
@@ -150,7 +152,7 @@ namespace Chip8
                         {
                             if (e.key.keysym.scancode == entry.Value)
                             {
-                                Console.WriteLine("Key pressed: {0}", entry.Value);
+                                // Console.WriteLine("Key pressed: {0}", entry.Value);
                                 // add the hex
                                 pressedKeys.Add(entry.Key);
                             }
@@ -162,7 +164,7 @@ namespace Chip8
                         {
                             if (e.key.keysym.scancode == entry.Value)
                             {
-                                Console.WriteLine("Key released: {0}", entry.Value);
+                                // Console.WriteLine("Key released: {0}", entry.Value);
                                 // remove the hex
                                 pressedKeys.Remove(entry.Key);
                             }
