@@ -31,7 +31,8 @@ namespace Chip8
 
         // stack
         private Stack<ushort> stack = new Stack<ushort>();
-        private bool paused = false;
+        private bool pressed = false;
+        private List<byte> prevKeyPressed = new List<byte>();
         private int speed = 10;
 
         // debugging
@@ -435,30 +436,27 @@ namespace Chip8
 
                             break;
                         case 0x000A:
-                            // keep decrementing until a key is pressed
-                            // then store the key in vx
-                            // TODO: not exactly sure how chip8 handles key presses
-                            if (!paused)
+                            //check if key is pressed
+                            if (emulator.PressedKeys.Count > 0)
                             {
-                                paused = true;
-                                pc -= 2;
-                            }
-                            else
-                            {
-                                for (byte i = 0; i < 16; i++)
+                                if (prevKeyPressed.Count > emulator.PressedKeys.Count)
                                 {
-                                    if (emulator.isKeyPressed(i))
+                                    // loop through and find the released key
+                                    for (int n = 0; n < prevKeyPressed.Count; n++)
                                     {
-                                        v[x] = i;
-                                        paused = false;
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        pc -= 2;
+                                        if (!emulator.PressedKeys.Contains(prevKeyPressed[n]))
+                                        {
+                                            v[x] = prevKeyPressed[n];
+                                            prevKeyPressed = new List<byte>();
+                                        }
                                     }
                                 }
                             }
+                            else
+                            {
+                                pc -= 2;
+                            }
+                            prevKeyPressed = emulator.PressedKeys;
                             break;
                         case 0x0029:
                             // set I to the address of the hexadecimal sprite in VX

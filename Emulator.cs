@@ -61,6 +61,10 @@ namespace Chip8
         };
 
         private List<byte> pressedKeys;
+        public List<byte> PressedKeys
+        {
+            get { return pressedKeys; }
+        }
 
         public Emulator(uint screen_hz, uint cpu_hz, uint screenScale)
         {
@@ -152,9 +156,12 @@ namespace Chip8
                         {
                             if (e.key.keysym.scancode == entry.Value)
                             {
-                                // Console.WriteLine("Key pressed: {0}", entry.Value);
+                                Console.WriteLine("Key pressed: {0}", entry.Value);
                                 // add the hex
-                                pressedKeys.Add(entry.Key);
+                                if (!isKeyPressed(entry.Key))
+                                {
+                                    pressedKeys.Add(entry.Key);
+                                }
                             }
                         }
                         // handle wait conditions here in the future
@@ -164,7 +171,7 @@ namespace Chip8
                         {
                             if (e.key.keysym.scancode == entry.Value)
                             {
-                                // Console.WriteLine("Key released: {0}", entry.Value);
+                                Console.WriteLine("Key released: {0}", entry.Value);
                                 // remove the hex
                                 pressedKeys.Remove(entry.Key);
                             }
