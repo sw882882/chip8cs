@@ -156,7 +156,7 @@ namespace Chip8
                         {
                             if (e.key.keysym.scancode == entry.Value)
                             {
-                                Console.WriteLine("Key pressed: {0}", entry.Value);
+                                // Console.WriteLine("Key pressed: {0}", entry.Value);
                                 // add the hex
                                 if (!isKeyPressed(entry.Key))
                                 {
@@ -171,7 +171,7 @@ namespace Chip8
                         {
                             if (e.key.keysym.scancode == entry.Value)
                             {
-                                Console.WriteLine("Key released: {0}", entry.Value);
+                                // Console.WriteLine("Key released: {0}", entry.Value);
                                 // remove the hex
                                 pressedKeys.Remove(entry.Key);
                             }

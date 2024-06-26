@@ -31,7 +31,6 @@ namespace Chip8
 
         // stack
         private Stack<ushort> stack = new Stack<ushort>();
-        private bool pressed = false;
         private List<byte> prevKeyPressed = new List<byte>();
         private int speed = 10;
 
